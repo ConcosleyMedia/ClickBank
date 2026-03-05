@@ -2,10 +2,9 @@ import type { CreateCheckoutOptions, WhopCheckoutSession, WhopApiResponse } from
 
 const WHOP_CHECKOUT_BASE = 'https://whop.com/checkout'
 
-// Plan IDs should be configured in environment variables
-const PLAN_IDS = {
-  standard: process.env.NEXT_PUBLIC_WHOP_STANDARD_PLAN_ID || 'plan_standard',
-  premium: process.env.NEXT_PUBLIC_WHOP_PREMIUM_PLAN_ID || 'plan_premium',
+// Get plan ID from env (lazy to avoid build-time issues)
+function getPlanId() {
+  return process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_standard'
 }
 
 export async function createCheckoutSession(
@@ -49,11 +48,10 @@ export async function createCheckoutSession(
 }
 
 export function getCheckoutUrl(
-  tier: 'standard' | 'premium',
   sessionId: string,
   affiliateId?: string
 ): string {
-  const planId = PLAN_IDS[tier]
+  const planId = getPlanId()
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
   const params = new URLSearchParams({
