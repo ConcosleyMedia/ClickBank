@@ -1,0 +1,8 @@
+export { Hero } from './Hero'
+export { HowItWorks } from './HowItWorks'
+export { AvailableTests } from './AvailableTests'
+export { BoostAbilities } from './BoostAbilities'
+export { Testimonials } from './Testimonials'
+export { PressLogos } from './PressLogos'
+export { PricingCards } from './PricingCards'
+export { FAQ } from './FAQ'

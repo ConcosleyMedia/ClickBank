@@ -1,0 +1,16 @@
+{
+  "name": "BrainRank",
+  "short_name": "BrainRank",
+  "description": "Discover your real IQ score with our scientifically designed intelligence test",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#14b8a6",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
