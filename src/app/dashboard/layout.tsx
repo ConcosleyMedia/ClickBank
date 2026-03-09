@@ -29,12 +29,12 @@ const icons = {
   ),
 }
 
-function LoadingState() {
+function LoadingState({ message = "Loading your results..." }: { message?: string }) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">
         <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-gray-600">Loading your results...</p>
+        <p className="text-gray-600">{message}</p>
       </div>
     </div>
   )
@@ -47,18 +47,23 @@ export default function DashboardLayout({
 }) {
   const pathname = usePathname()
   const router = useRouter()
-  const { isLoading, isSubscribed, email } = useSubscription()
+  const { isLoading, isSubscribed, email, isPolling } = useSubscription()
 
   useEffect(() => {
-    if (!isLoading && !isSubscribed) {
+    if (!isLoading && !isSubscribed && !isPolling) {
       // Redirect to results paywall if not subscribed
       router.replace('/results')
     }
-  }, [isLoading, isSubscribed, router])
+  }, [isLoading, isSubscribed, isPolling, router])
 
   // Show loading state while checking subscription
   if (isLoading) {
     return <LoadingState />
+  }
+
+  // Show verifying state while polling after payment
+  if (isPolling) {
+    return <LoadingState message="Verifying your payment..." />
   }
 
   // Don't render dashboard content if not subscribed

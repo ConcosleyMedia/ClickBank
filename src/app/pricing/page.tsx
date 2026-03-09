@@ -90,6 +90,9 @@ export default function PricingPage() {
       checkoutUrl += `?email=${encodeURIComponent(email)}`
     }
 
+    // Set flag so dashboard knows to poll for subscription
+    localStorage.setItem('payment_pending', Date.now().toString())
+
     window.location.href = checkoutUrl
   }
 

@@ -58,6 +58,9 @@ export default function ResultsPage() {
       checkoutUrl += `?email=${encodeURIComponent(email)}`
     }
 
+    // Set flag so dashboard knows to poll for subscription
+    localStorage.setItem('payment_pending', Date.now().toString())
+
     // Redirect to Whop checkout
     window.location.href = checkoutUrl
   }
