@@ -92,6 +92,9 @@ export function useQuiz(): UseQuizReturn {
       }
       sessionStorage.setItem('quiz_session', JSON.stringify(toSave))
 
+      // Store in localStorage too (persists after leaving for Whop checkout)
+      localStorage.setItem('brainrank_session', sessionToken)
+
       document.cookie = `brainrank_session=${sessionToken}; path=/; max-age=${7 * 24 * 60 * 60}; samesite=lax`
     } catch (error) {
       setState((prev) => ({
@@ -113,6 +116,8 @@ export function useQuiz(): UseQuizReturn {
         const parsed = JSON.parse(savedSession)
         if (parsed.sessionToken && parsed.questionIds?.length > 0) {
           hasInitializedRef.current = true
+          // Ensure localStorage also has the session token
+          localStorage.setItem('brainrank_session', parsed.sessionToken)
           setState({
             sessionToken: parsed.sessionToken,
             gender: parsed.gender,

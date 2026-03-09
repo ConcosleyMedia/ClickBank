@@ -55,6 +55,17 @@ export async function POST(request: NextRequest) {
         ip_address: ipAddress,
         user_agent: userAgent,
       })
+
+      // Also create/update profile with session_id for payment matching
+      if (sessionToken) {
+        await supabase.from('profiles').upsert({
+          email,
+          session_id: sessionToken,
+          subscription_status: 'pending',
+        }, {
+          onConflict: 'email',
+        })
+      }
     } catch (dbError) {
       console.error('Failed to save email:', dbError)
       // Don't fail the request if DB save fails

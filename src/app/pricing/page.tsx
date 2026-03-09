@@ -84,11 +84,19 @@ export default function PricingPage() {
       return
     }
 
-    let checkoutUrl = `https://whop.com/checkout/${whopPlanId}/`
+    const sessionToken = localStorage.getItem('brainrank_session')
 
+    // Build checkout URL with session token for tracking
+    const params = new URLSearchParams()
     if (email) {
-      checkoutUrl += `?email=${encodeURIComponent(email)}`
+      params.set('email', email)
     }
+    if (sessionToken) {
+      // Pass session token as metadata - Whop includes this in webhooks
+      params.set('d[session_id]', sessionToken)
+    }
+
+    const checkoutUrl = `https://whop.com/checkout/${whopPlanId}/?${params.toString()}`
 
     // Set flag so dashboard knows to poll for subscription
     localStorage.setItem('payment_pending', Date.now().toString())

@@ -94,33 +94,66 @@ async function handleMembershipActive(data: WhopWebhookPayload['data']): Promise
     const membershipId = data.membershipId
     const fullName = data.name || data.user?.name || data.username || data.user?.username || null
 
-    console.log('Extracted - Email:', email, 'MembershipId:', membershipId, 'Name:', fullName)
+    // Extract session_id from metadata (passed via checkout URL d[session_id]=xxx)
+    // Whop may nest it differently depending on webhook version
+    const metadata = data.metadata as Record<string, unknown> | undefined
+    const sessionId = (
+      metadata?.session_id ||
+      (metadata?.d as Record<string, unknown>)?.session_id ||
+      null
+    ) as string | null
 
-    if (!email) {
-      console.error('No email found in membership data')
+    console.log('Extracted - Email:', email, 'MembershipId:', membershipId, 'Name:', fullName, 'SessionId:', sessionId)
+
+    if (!email && !sessionId) {
+      console.error('No email or session_id found in membership data')
       return { success: false }
     }
 
-    // Create or update profile with user's name
-    const { error } = await supabase
-      .from('profiles')
-      .upsert({
-        email,
-        full_name: fullName,
-        whop_membership_id: membershipId,
-        subscription_status: 'active',
-        subscription_started_at: new Date().toISOString(),
-      }, {
-        onConflict: 'email',
-      })
+    // If we have a session_id, update by session_id (most reliable)
+    if (sessionId) {
+      const { error: sessionError } = await supabase
+        .from('profiles')
+        .update({
+          whop_email: email,
+          full_name: fullName,
+          whop_membership_id: membershipId,
+          subscription_status: 'active',
+          subscription_started_at: new Date().toISOString(),
+        })
+        .eq('session_id', sessionId)
 
-    if (error) {
-      console.error('Failed to upsert profile:', error)
-      return { success: false }
+      if (!sessionError) {
+        console.log('Profile updated by session_id:', sessionId)
+        return { success: true }
+      }
+      console.log('No profile found with session_id, falling back to email')
     }
 
-    console.log('Profile saved successfully for:', email)
-    return { success: true }
+    // Fallback: Create or update profile by email
+    if (email) {
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          email,
+          full_name: fullName,
+          whop_membership_id: membershipId,
+          subscription_status: 'active',
+          subscription_started_at: new Date().toISOString(),
+        }, {
+          onConflict: 'email',
+        })
+
+      if (error) {
+        console.error('Failed to upsert profile:', error)
+        return { success: false }
+      }
+
+      console.log('Profile saved successfully for:', email)
+      return { success: true }
+    }
+
+    return { success: false }
   } catch (error) {
     console.error('handleMembershipActive error:', error)
     return { success: false }

@@ -46,17 +46,22 @@ export default function ResultsPage() {
 
   const handlePayment = async () => {
     const email = localStorage.getItem('user_email')
+    const sessionToken = localStorage.getItem('brainrank_session')
 
     // Whop checkout URL format: https://whop.com/checkout/PLAN_ID
     const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_LzegxjfCsDjIV'
 
-    // Build checkout URL - Whop will redirect to the URL set in product settings
-    // Make sure to set redirect URL in Whop Dashboard → Products → Settings
-    let checkoutUrl = `https://whop.com/checkout/${planId}/`
-
+    // Build checkout URL with session token for tracking
+    const params = new URLSearchParams()
     if (email) {
-      checkoutUrl += `?email=${encodeURIComponent(email)}`
+      params.set('email', email)
     }
+    if (sessionToken) {
+      // Pass session token as metadata - Whop includes this in webhooks
+      params.set('d[session_id]', sessionToken)
+    }
+
+    const checkoutUrl = `https://whop.com/checkout/${planId}/?${params.toString()}`
 
     // Set flag so dashboard knows to poll for subscription
     localStorage.setItem('payment_pending', Date.now().toString())

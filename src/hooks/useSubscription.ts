@@ -21,22 +21,37 @@ export function useSubscription(): SubscriptionState {
     isPolling: false,
   })
 
-  const checkSubscription = useCallback(async (email: string): Promise<boolean> => {
+  const checkSubscription = useCallback(async (): Promise<{ isSubscribed: boolean; email?: string }> => {
+    const sessionId = localStorage.getItem('brainrank_session')
+    const email = localStorage.getItem('user_email')
+
+    if (!sessionId && !email) {
+      return { isSubscribed: false }
+    }
+
     try {
-      const response = await fetch(`/api/user/subscription?email=${encodeURIComponent(email)}`)
+      const params = new URLSearchParams()
+      if (sessionId) params.set('session_id', sessionId)
+      if (email) params.set('email', email)
+
+      const response = await fetch(`/api/user/subscription?${params.toString()}`)
       const data = await response.json()
-      return data.isSubscribed === true
+      return {
+        isSubscribed: data.isSubscribed === true,
+        email: data.email || email,
+      }
     } catch (error) {
       console.error('Failed to check subscription:', error)
-      return false
+      return { isSubscribed: false }
     }
   }, [])
 
   useEffect(() => {
     async function init() {
+      const sessionId = localStorage.getItem('brainrank_session')
       const email = localStorage.getItem('user_email')
 
-      if (!email) {
+      if (!sessionId && !email) {
         setState({ isLoading: false, isSubscribed: false, email: null, isPolling: false })
         return
       }
@@ -47,11 +62,15 @@ export function useSubscription(): SubscriptionState {
         (Date.now() - parseInt(paymentPending, 10)) < PAYMENT_PENDING_TIMEOUT_MS
 
       // First check
-      const isSubscribed = await checkSubscription(email)
+      const result = await checkSubscription()
 
-      if (isSubscribed) {
+      if (result.isSubscribed) {
         localStorage.removeItem('payment_pending')
-        setState({ isLoading: false, isSubscribed: true, email, isPolling: false })
+        // Update email if we got it from Whop
+        if (result.email) {
+          localStorage.setItem('user_email', result.email)
+        }
+        setState({ isLoading: false, isSubscribed: true, email: result.email || email, isPolling: false })
         return
       }
 
@@ -62,18 +81,21 @@ export function useSubscription(): SubscriptionState {
         let attempts = 0
         const poll = async () => {
           attempts++
-          const subscribed = await checkSubscription(email)
+          const pollResult = await checkSubscription()
 
-          if (subscribed) {
+          if (pollResult.isSubscribed) {
             localStorage.removeItem('payment_pending')
-            setState({ isLoading: false, isSubscribed: true, email, isPolling: false })
+            if (pollResult.email) {
+              localStorage.setItem('user_email', pollResult.email)
+            }
+            setState({ isLoading: false, isSubscribed: true, email: pollResult.email || email, isPolling: false })
             return
           }
 
           if (attempts < MAX_POLL_ATTEMPTS) {
             setTimeout(poll, POLL_INTERVAL_MS)
           } else {
-            // Give up polling, but keep the pending flag for retry on refresh
+            // Give up polling
             setState({ isLoading: false, isSubscribed: false, email, isPolling: false })
           }
         }
