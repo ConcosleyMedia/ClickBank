@@ -190,6 +190,13 @@ function determineStrongestSkill(
 }
 
 /**
+ * Simple wrapper for calculateScores that takes answers array and time
+ */
+export function calculateIQScore(answers: QuizAnswer[], totalTimeSeconds: number): QuizScores {
+  return calculateScores({ answers, totalTimeSeconds })
+}
+
+/**
  * Generate a summary message based on scores
  */
 export function generateScoreSummary(scores: QuizScores): string {

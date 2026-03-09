@@ -34,7 +34,7 @@ export default function QuizPage() {
   const handleComplete = async () => {
     timer.pause()
     const result = await quiz.completeQuiz()
-    sessionStorage.setItem('quiz_result', JSON.stringify(result))
+    localStorage.setItem('quiz_result', JSON.stringify(result))
     router.push('/calculating')
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { calculateIQScore } from '@/lib/quiz/scoring'
 
 interface QuizResult {
   iqScore: number
@@ -25,18 +26,50 @@ export default function DashboardPage() {
   const [result, setResult] = useState<QuizResult | null>(null)
 
   useEffect(() => {
-    // In production, this would fetch from the API
-    // For demo, we'll use simulated data
-    setResult({
-      iqScore: 118,
-      percentile: 87,
-      memoryScore: 82,
-      speedScore: 91,
-      reactionScore: 78,
-      concentrationScore: 85,
-      logicScore: 88,
-      strongestSkill: 'speed',
-    })
+    // Load quiz result from localStorage (persists across Whop redirect)
+    const savedResult = localStorage.getItem('quiz_result')
+
+    if (savedResult) {
+      try {
+        const parsed = JSON.parse(savedResult)
+        const scores = calculateIQScore(parsed.answers || [], parsed.totalTimeSeconds || 600)
+
+        setResult({
+          iqScore: scores.iqScore,
+          percentile: scores.percentile,
+          memoryScore: scores.memoryScore,
+          speedScore: scores.speedScore,
+          reactionScore: scores.reactionScore,
+          concentrationScore: scores.concentrationScore,
+          logicScore: scores.logicScore,
+          strongestSkill: scores.strongestSkill,
+        })
+      } catch {
+        // Fallback to demo data if parsing fails
+        setResult({
+          iqScore: 118,
+          percentile: 87,
+          memoryScore: 82,
+          speedScore: 91,
+          reactionScore: 78,
+          concentrationScore: 85,
+          logicScore: 88,
+          strongestSkill: 'speed',
+        })
+      }
+    } else {
+      // No saved result - show demo data
+      setResult({
+        iqScore: 118,
+        percentile: 87,
+        memoryScore: 82,
+        speedScore: 91,
+        reactionScore: 78,
+        concentrationScore: 85,
+        logicScore: 88,
+        strongestSkill: 'speed',
+      })
+    }
   }, [])
 
   if (!result) {
