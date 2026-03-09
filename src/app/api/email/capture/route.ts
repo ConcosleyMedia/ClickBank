@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -27,13 +28,37 @@ export async function POST(request: NextRequest) {
     const sessionToken = cookieStore.get('brainrank_session')?.value
     const affiliateId = cookieStore.get('affiliate_id')?.value
 
-    // TODO: Store email in database via Supabase
-    // const supabase = await createServiceClient()
-    // await supabase.from('email_captures').insert({
-    //   email,
-    //   session_id: sessionToken ? /* lookup session id */ : null,
-    //   affiliate_id: affiliateId,
-    // })
+    // Get IP and user agent
+    const headersList = await headers()
+    const ipAddress = headersList.get('x-forwarded-for')?.split(',')[0] || null
+    const userAgent = headersList.get('user-agent') || null
+
+    // Store email in Supabase
+    try {
+      const supabase = await createClient()
+
+      // Find the quiz session if we have a token
+      let sessionId = null
+      if (sessionToken) {
+        const { data: session } = await supabase
+          .from('quiz_sessions')
+          .select('id')
+          .eq('session_token', sessionToken)
+          .single()
+        sessionId = session?.id || null
+      }
+
+      await supabase.from('email_captures').insert({
+        email,
+        session_id: sessionId,
+        affiliate_id: affiliateId || null,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+      })
+    } catch (dbError) {
+      console.error('Failed to save email:', dbError)
+      // Don't fail the request if DB save fails
+    }
 
     return NextResponse.json({
       data: {

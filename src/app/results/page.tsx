@@ -20,7 +20,7 @@ export default function ResultsPage() {
   // Check for email on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const email = sessionStorage.getItem('user_email')
+      const email = localStorage.getItem('user_email')
       if (!email) {
         router.replace('/email')
       }
@@ -45,7 +45,7 @@ export default function ResultsPage() {
   }
 
   const handlePayment = async () => {
-    const email = sessionStorage.getItem('user_email')
+    const email = localStorage.getItem('user_email')
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
     // Whop checkout URL format: https://whop.com/checkout/PLAN_ID

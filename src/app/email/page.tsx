@@ -18,7 +18,7 @@ export default function EmailCapturePage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const quizResult = sessionStorage.getItem('quiz_result')
+      const quizResult = localStorage.getItem('quiz_result')
       if (quizResult) {
         const result = JSON.parse(quizResult)
         const minutes = Math.floor(result.totalTimeSeconds / 60)
@@ -61,8 +61,8 @@ export default function EmailCapturePage() {
         throw new Error(data.error)
       }
 
-      // Store email in session
-      sessionStorage.setItem('user_email', email)
+      // Store email in localStorage (persists across Whop redirect)
+      localStorage.setItem('user_email', email)
 
       // Navigate to results
       router.push('/results')
