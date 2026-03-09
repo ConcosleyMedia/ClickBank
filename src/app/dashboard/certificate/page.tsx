@@ -32,10 +32,24 @@ export default function CertificatePage() {
       }
     }
 
-    // Use email as default name if available
+    // Try to fetch user profile from Supabase (contains Whop payment name)
     if (savedEmail) {
-      const namePart = savedEmail.split('@')[0]
-      setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
+      fetch(`/api/user/profile?email=${encodeURIComponent(savedEmail)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.data?.full_name) {
+            setUserName(data.data.full_name)
+          } else {
+            // Fallback: use email username
+            const namePart = savedEmail.split('@')[0]
+            setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
+          }
+        })
+        .catch(() => {
+          // Fallback: use email username
+          const namePart = savedEmail.split('@')[0]
+          setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
+        })
     }
   }, [])
 

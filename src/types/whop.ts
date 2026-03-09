@@ -32,6 +32,14 @@ export interface WhopEvent {
   createdAt: string
 }
 
+export interface WhopUser {
+  id: string
+  email: string
+  name?: string
+  username?: string
+  profile_pic_url?: string
+}
+
 export interface WhopEventData {
   membershipId: string
   userId: string
@@ -40,6 +48,11 @@ export interface WhopEventData {
   amount?: number
   currency?: string
   metadata?: Record<string, string>
+  // User info from Whop
+  user?: WhopUser
+  // Direct fields that may be on the payload
+  name?: string
+  username?: string
 }
 
 export interface WhopWebhookPayload {

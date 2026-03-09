@@ -68,23 +68,26 @@ export function parseWebhookPayload(body: string): WhopWebhookPayload | null {
 export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) => Promise<{ success: boolean }>> = {
   'membership.went_valid': async (data: WhopWebhookPayload['data']) => {
     // Membership is now active (payment succeeded, trial started, etc.)
-    console.log('Membership went valid:', data)
+    console.log('Membership went valid:', JSON.stringify(data, null, 2))
 
     try {
       const supabase = await createClient()
-      const email = data.email
+      const email = data.email || data.user?.email
       const membershipId = data.membershipId
+      // Get user's name from various possible fields
+      const fullName = data.name || data.user?.name || data.username || data.user?.username || null
 
       if (!email) {
         console.error('No email in membership data')
         return { success: false }
       }
 
-      // Create or update profile
+      // Create or update profile with user's name
       const { error } = await supabase
         .from('profiles')
         .upsert({
           email,
+          full_name: fullName,
           whop_membership_id: membershipId,
           subscription_status: 'active',
           subscription_started_at: new Date().toISOString(),
@@ -97,6 +100,7 @@ export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) 
         return { success: false }
       }
 
+      console.log('Profile created/updated for:', email, 'Name:', fullName)
       return { success: true }
     } catch (error) {
       console.error('membership.went_valid handler error:', error)
