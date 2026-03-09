@@ -47,71 +47,104 @@ export function verifyWebhookSignature(
 
 /**
  * Parse webhook payload
+ * Whop may use "action" or "event" for the event type
  */
 export function parseWebhookPayload(body: string): WhopWebhookPayload | null {
   try {
     const parsed = JSON.parse(body)
+
+    // Whop uses "action" field, not "event"
+    const eventType = parsed.action || parsed.event || parsed.type
+
+    // Data might be at top level or in a "data" field
+    const data = parsed.data || parsed
+
     return {
-      id: parsed.id,
-      event: parsed.event as WhopEventType,
-      data: parsed.data,
-      created_at: parsed.created_at,
+      id: parsed.id || crypto.randomUUID(),
+      event: eventType as WhopEventType,
+      data: {
+        membershipId: data.membership_id || data.id || data.membershipId,
+        userId: data.user_id || data.userId,
+        email: data.email || data.user?.email,
+        planId: data.plan_id || data.planId,
+        amount: data.amount,
+        currency: data.currency,
+        metadata: data.metadata,
+        user: data.user,
+        name: data.user?.name || data.name,
+        username: data.user?.username || data.username,
+      },
+      created_at: parsed.created_at || new Date().toISOString(),
     }
-  } catch {
+  } catch (e) {
+    console.error('parseWebhookPayload error:', e)
     return null
   }
 }
 
 /**
- * Event handlers for different webhook types
+ * Handle membership activation (shared logic)
  */
-export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) => Promise<{ success: boolean }>> = {
-  'membership.went_valid': async (data: WhopWebhookPayload['data']) => {
-    // Membership is now active (payment succeeded, trial started, etc.)
-    console.log('Membership went valid:', JSON.stringify(data, null, 2))
+async function handleMembershipActive(data: WhopWebhookPayload['data']): Promise<{ success: boolean }> {
+  console.log('Processing membership activation:', JSON.stringify(data, null, 2))
 
-    try {
-      const supabase = await createClient()
-      const email = data.email || data.user?.email
-      const membershipId = data.membershipId
-      // Get user's name from various possible fields
-      const fullName = data.name || data.user?.name || data.username || data.user?.username || null
+  try {
+    const supabase = await createClient()
+    const email = data.email || data.user?.email
+    const membershipId = data.membershipId
+    const fullName = data.name || data.user?.name || data.username || data.user?.username || null
 
-      if (!email) {
-        console.error('No email in membership data')
-        return { success: false }
-      }
+    console.log('Extracted - Email:', email, 'MembershipId:', membershipId, 'Name:', fullName)
 
-      // Create or update profile with user's name
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          email,
-          full_name: fullName,
-          whop_membership_id: membershipId,
-          subscription_status: 'active',
-          subscription_started_at: new Date().toISOString(),
-        }, {
-          onConflict: 'email',
-        })
-
-      if (error) {
-        console.error('Failed to upsert profile:', error)
-        return { success: false }
-      }
-
-      console.log('Profile created/updated for:', email, 'Name:', fullName)
-      return { success: true }
-    } catch (error) {
-      console.error('membership.went_valid handler error:', error)
+    if (!email) {
+      console.error('No email found in membership data')
       return { success: false }
     }
-  },
 
-  'membership.went_invalid': async (data: WhopWebhookPayload['data']) => {
-    // Membership is no longer active (cancelled, expired, payment failed)
+    // Create or update profile with user's name
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        email,
+        full_name: fullName,
+        whop_membership_id: membershipId,
+        subscription_status: 'active',
+        subscription_started_at: new Date().toISOString(),
+      }, {
+        onConflict: 'email',
+      })
+
+    if (error) {
+      console.error('Failed to upsert profile:', error)
+      return { success: false }
+    }
+
+    console.log('Profile saved successfully for:', email)
+    return { success: true }
+  } catch (error) {
+    console.error('handleMembershipActive error:', error)
+    return { success: false }
+  }
+}
+
+/**
+ * Event handlers for different webhook types
+ * Whop uses various event names - we handle all variations
+ */
+export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) => Promise<{ success: boolean }>> = {
+  // Membership activation events
+  'membership.went_valid': (data) => handleMembershipActive(data),
+  'membership.activated': (data) => handleMembershipActive(data),
+  'membership.created': (data) => handleMembershipActive(data),
+  'membership_went_valid': (data) => handleMembershipActive(data),
+
+  // Payment events - also activate membership
+  'payment.succeeded': (data) => handleMembershipActive(data),
+  'payment_succeeded': (data) => handleMembershipActive(data),
+
+  // Membership deactivation
+  'membership.went_invalid': async (data) => {
     console.log('Membership went invalid:', data)
-
     try {
       const supabase = await createClient()
       const membershipId = data.membershipId
@@ -128,21 +161,14 @@ export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) 
         console.error('Failed to update profile:', error)
         return { success: false }
       }
-
       return { success: true }
     } catch (error) {
-      console.error('membership.went_invalid handler error:', error)
+      console.error('membership.went_invalid error:', error)
       return { success: false }
     }
   },
 
-  'payment.succeeded': async (data: WhopWebhookPayload['data']) => {
-    console.log('Payment succeeded:', data)
-    // Payment succeeded - membership.went_valid handles the actual access grant
-    return { success: true }
-  },
-
-  'payment.failed': async (data: WhopWebhookPayload['data']) => {
+  'payment.failed': async (data) => {
     console.log('Payment failed:', data)
     return { success: true }
   },
