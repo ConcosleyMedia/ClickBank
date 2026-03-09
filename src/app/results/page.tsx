@@ -45,34 +45,19 @@ export default function ResultsPage() {
   }
 
   const handlePayment = async () => {
-    const sessionToken = sessionStorage.getItem('quiz_session')
     const email = sessionStorage.getItem('user_email')
-
-    let sessionId = ''
-    try {
-      const parsed = JSON.parse(sessionToken || '{}')
-      sessionId = parsed.sessionToken || ''
-    } catch {
-      // ignore
-    }
-
-    // Build Whop checkout URL
-    const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_xKcYuwkYYT5mB'
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
-    const params = new URLSearchParams({
-      plan: planId,
-      redirect_url: `${baseUrl}/dashboard`,
-    })
+    // Whop checkout URL format: https://whop.com/checkout/PLAN_ID
+    const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_xKcYuwkYYT5mB'
+
+    const params = new URLSearchParams()
+    params.set('d', `${baseUrl}/dashboard`) // redirect after purchase
 
     if (email) params.set('email', email)
 
-    // Add metadata for webhook to link payment to quiz session
-    const metadata = { session_id: sessionId }
-    params.set('metadata', JSON.stringify(metadata))
-
     // Redirect to Whop checkout
-    window.location.href = `https://whop.com/checkout/?${params.toString()}`
+    window.location.href = `https://whop.com/checkout/${planId}/?${params.toString()}`
   }
 
   return (
