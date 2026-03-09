@@ -48,7 +48,7 @@ export default function ResultsPage() {
     const email = localStorage.getItem('user_email')
 
     // Whop checkout URL format: https://whop.com/checkout/PLAN_ID
-    const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_xKcYuwkYYT5mB'
+    const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_LzegxjfCsDjIV'
 
     // Build checkout URL - Whop will redirect to the URL set in product settings
     // Make sure to set redirect URL in Whop Dashboard → Products → Settings
