@@ -1,11 +1,43 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
+import { calculateIQScore } from '@/lib/quiz/scoring'
+
+interface QuizResult {
+  iqScore: number
+  percentile: number
+}
 
 export default function CertificatePage() {
   const certificateRef = useRef<HTMLDivElement>(null)
-  const [userName, setUserName] = useState('Test User')
+  const [userName, setUserName] = useState('')
   const [isDownloading, setIsDownloading] = useState(false)
+  const [result, setResult] = useState<QuizResult>({ iqScore: 0, percentile: 0 })
+
+  useEffect(() => {
+    // Load quiz result from localStorage
+    const savedResult = localStorage.getItem('quiz_result')
+    const savedEmail = localStorage.getItem('user_email')
+
+    if (savedResult) {
+      try {
+        const parsed = JSON.parse(savedResult)
+        const scores = calculateIQScore(parsed.answers || [], parsed.totalTimeSeconds || 600)
+        setResult({
+          iqScore: scores.iqScore,
+          percentile: scores.percentile,
+        })
+      } catch {
+        setResult({ iqScore: 100, percentile: 50 })
+      }
+    }
+
+    // Use email as default name if available
+    if (savedEmail) {
+      const namePart = savedEmail.split('@')[0]
+      setUserName(namePart.charAt(0).toUpperCase() + namePart.slice(1))
+    }
+  }, [])
 
   const handleDownload = async () => {
     setIsDownloading(true)
@@ -75,12 +107,12 @@ export default function CertificatePage() {
             {/* Score */}
             <p className="text-gray-600 mb-2">has achieved an IQ score of</p>
             <div className="bg-teal-500 text-white px-8 py-3 rounded-xl mb-8">
-              <span className="text-5xl font-bold">118</span>
+              <span className="text-5xl font-bold">{result.iqScore}</span>
             </div>
 
             {/* Percentile */}
             <p className="text-gray-500 text-sm mb-8">
-              Scoring higher than 87% of test takers worldwide
+              Scoring higher than {result.percentile}% of test takers worldwide
             </p>
 
             {/* Date and signature */}
