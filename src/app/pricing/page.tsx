@@ -1,10 +1,7 @@
-import type { Metadata } from 'next'
-import Link from 'next/link'
+'use client'
 
-export const metadata: Metadata = {
-  title: 'Pricing - BrainRank',
-  description: 'Choose the perfect BrainRank plan for your cognitive development journey.',
-}
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
 
 const plans = [
   {
@@ -22,6 +19,7 @@ const plans = [
     ],
     cta: 'Start Trial',
     popular: false,
+    envKey: 'NEXT_PUBLIC_WHOP_PLAN_TRIAL',
   },
   {
     id: 'weekly',
@@ -39,6 +37,7 @@ const plans = [
     ],
     cta: 'Get Started',
     popular: true,
+    envKey: 'NEXT_PUBLIC_WHOP_PLAN_WEEKLY',
   },
   {
     id: 'monthly',
@@ -57,15 +56,54 @@ const plans = [
     cta: 'Get Started',
     popular: false,
     savings: 'Save 25%',
+    envKey: 'NEXT_PUBLIC_WHOP_PLAN_MONTHLY',
   },
 ]
 
+const planIds: Record<string, string | undefined> = {
+  trial: process.env.NEXT_PUBLIC_WHOP_PLAN_TRIAL,
+  weekly: process.env.NEXT_PUBLIC_WHOP_PLAN_WEEKLY,
+  monthly: process.env.NEXT_PUBLIC_WHOP_PLAN_MONTHLY,
+}
+
 export default function PricingPage() {
+  const [email, setEmail] = useState<string | null>(null)
+
+  useEffect(() => {
+    const storedEmail = localStorage.getItem('user_email')
+    if (storedEmail) {
+      setEmail(storedEmail)
+    }
+  }, [])
+
+  const handlePlanSelect = (planId: string) => {
+    const whopPlanId = planIds[planId]
+
+    if (!whopPlanId) {
+      console.error(`Plan ID not configured for: ${planId}`)
+      return
+    }
+
+    let checkoutUrl = `https://whop.com/checkout/${whopPlanId}/`
+
+    if (email) {
+      checkoutUrl += `?email=${encodeURIComponent(email)}`
+    }
+
+    window.location.href = checkoutUrl
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white py-16">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="text-center mb-16">
+          <Link href="/" className="inline-flex items-center gap-2 mb-8">
+            <div className="w-8 h-8 bg-teal-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-lg">B</span>
+            </div>
+            <span className="text-xl font-bold text-gray-900">BrainRank</span>
+          </Link>
           <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-4">
             Simple, Transparent Pricing
           </h1>
@@ -125,16 +163,16 @@ export default function PricingPage() {
               </ul>
 
               {/* CTA */}
-              <Link
-                href="/start"
-                className={`block w-full text-center py-4 rounded-xl font-semibold transition-colors ${
+              <button
+                onClick={() => handlePlanSelect(plan.id)}
+                className={`block w-full text-center py-4 rounded-xl font-semibold transition-colors cursor-pointer ${
                   plan.popular
                     ? 'bg-teal-500 hover:bg-teal-600 text-white'
                     : 'bg-gray-100 hover:bg-gray-200 text-gray-900'
                 }`}
               >
                 {plan.cta}
-              </Link>
+              </button>
             </div>
           ))}
         </div>

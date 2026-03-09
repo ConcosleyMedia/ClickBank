@@ -1,7 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { useSubscription } from '@/hooks/useSubscription'
 
 const navItems = [
   { href: '/dashboard', label: 'Results', icon: 'chart' },
@@ -27,12 +29,42 @@ const icons = {
   ),
 }
 
+function LoadingState() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-center">
+        <div className="w-12 h-12 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+        <p className="text-gray-600">Loading your results...</p>
+      </div>
+    </div>
+  )
+}
+
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
+  const { isLoading, isSubscribed, email } = useSubscription()
+
+  useEffect(() => {
+    if (!isLoading && !isSubscribed) {
+      // Redirect to results paywall if not subscribed
+      router.replace('/results')
+    }
+  }, [isLoading, isSubscribed, router])
+
+  // Show loading state while checking subscription
+  if (isLoading) {
+    return <LoadingState />
+  }
+
+  // Don't render dashboard content if not subscribed
+  if (!isSubscribed) {
+    return <LoadingState />
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -47,11 +79,16 @@ export default function DashboardLayout({
               <span className="text-xl font-bold text-gray-900">BrainRank</span>
             </Link>
 
-            <button className="text-gray-500 hover:text-gray-700">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
+            <div className="flex items-center gap-4">
+              {email && (
+                <span className="text-sm text-gray-500 hidden sm:block">{email}</span>
+              )}
+              <button className="text-gray-500 hover:text-gray-700">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -62,6 +62,11 @@ export default function QuizPage() {
 
   const handleSubmitAnswer = (value: string, isCorrect?: boolean) => {
     quiz.submitAnswer(value, isCorrect)
+
+    // Auto-advance immediately (unless last question)
+    if (quiz.currentIndex < quiz.totalQuestions - 1) {
+      quiz.goToNext()
+    }
   }
 
   const handleNext = () => {
@@ -184,7 +189,8 @@ export default function QuizPage() {
     }
   }
 
-  const submitLabel = quiz.isLastQuestion ? 'Get My Results' : 'Next'
+  // Only show submit button on last question
+  const showSubmitButton = quiz.isLastQuestion && !!currentAnswer
 
   return (
     <QuizShell
@@ -193,9 +199,9 @@ export default function QuizPage() {
       totalQuestions={quiz.totalQuestions}
       formattedTime={timer.formatTime()}
       canGoBack={!quiz.isFirstQuestion}
-      canSkip={quiz.currentQuestion.type !== 'demographic'}
-      showSubmit={!!currentAnswer}
-      submitLabel={submitLabel}
+      canSkip={quiz.currentQuestion.type !== 'demographic' && !quiz.isLastQuestion}
+      showSubmit={showSubmitButton}
+      submitLabel="Get My Results"
       onBack={quiz.goToPrevious}
       onSkip={quiz.skipQuestion}
       onSubmit={handleNext}
