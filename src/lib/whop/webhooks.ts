@@ -72,8 +72,8 @@ export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) 
 
     try {
       const supabase = await createClient()
-      const email = data.email || data.user?.email
-      const membershipId = data.id
+      const email = data.email
+      const membershipId = data.membershipId
 
       if (!email) {
         console.error('No email in membership data')
@@ -110,7 +110,7 @@ export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) 
 
     try {
       const supabase = await createClient()
-      const membershipId = data.id
+      const membershipId = data.membershipId
 
       const { error } = await supabase
         .from('profiles')
