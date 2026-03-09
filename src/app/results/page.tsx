@@ -44,15 +44,35 @@ export default function ResultsPage() {
     paymentRef.current?.scrollIntoView({ behavior: 'smooth' })
   }
 
-  const handlePayment = async (tier: 'standard' | 'premium') => {
-    // TODO: Integrate with Whop checkout
-    // For now, just show an alert
-    alert(`Redirecting to Whop checkout for ${tier} tier...`)
+  const handlePayment = async () => {
+    const sessionToken = sessionStorage.getItem('quiz_session')
+    const email = sessionStorage.getItem('user_email')
 
-    // In production, this would:
-    // 1. Call /api/checkout/create with tier and session info
-    // 2. Redirect to Whop checkout URL
-    // 3. Whop handles payment and redirects back
+    let sessionId = ''
+    try {
+      const parsed = JSON.parse(sessionToken || '{}')
+      sessionId = parsed.sessionToken || ''
+    } catch {
+      // ignore
+    }
+
+    // Build Whop checkout URL
+    const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_xKcYuwkYYT5mB'
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
+
+    const params = new URLSearchParams({
+      plan: planId,
+      redirect_url: `${baseUrl}/dashboard`,
+    })
+
+    if (email) params.set('email', email)
+
+    // Add metadata for webhook to link payment to quiz session
+    const metadata = { session_id: sessionId }
+    params.set('metadata', JSON.stringify(metadata))
+
+    // Redirect to Whop checkout
+    window.location.href = `https://whop.com/checkout/?${params.toString()}`
   }
 
   return (

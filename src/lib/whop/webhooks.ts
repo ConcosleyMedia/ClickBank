@@ -1,7 +1,10 @@
 import { createHmac, timingSafeEqual } from 'crypto'
 import type { WhopWebhookPayload, WhopEventType } from '@/types'
+import { createClient } from '@/lib/supabase/server'
 
-const WEBHOOK_SECRET = process.env.WHOP_WEBHOOK_SECRET || ''
+function getWebhookSecret() {
+  return process.env.WHOP_WEBHOOK_SECRET || ''
+}
 
 interface WebhookVerificationResult {
   valid: boolean
@@ -15,12 +18,13 @@ export function verifyWebhookSignature(
   payload: string,
   signature: string
 ): WebhookVerificationResult {
-  if (!WEBHOOK_SECRET) {
+  const secret = getWebhookSecret()
+  if (!secret) {
     return { valid: false, error: 'Webhook secret not configured' }
   }
 
   try {
-    const expectedSignature = createHmac('sha256', WEBHOOK_SECRET)
+    const expectedSignature = createHmac('sha256', secret)
       .update(payload)
       .digest('hex')
 
@@ -61,46 +65,81 @@ export function parseWebhookPayload(body: string): WhopWebhookPayload | null {
 /**
  * Event handlers for different webhook types
  */
-export const webhookHandlers = {
+export const webhookHandlers: Record<string, (data: WhopWebhookPayload['data']) => Promise<{ success: boolean }>> = {
+  'membership.went_valid': async (data: WhopWebhookPayload['data']) => {
+    // Membership is now active (payment succeeded, trial started, etc.)
+    console.log('Membership went valid:', data)
+
+    try {
+      const supabase = await createClient()
+      const email = data.email || data.user?.email
+      const membershipId = data.id
+
+      if (!email) {
+        console.error('No email in membership data')
+        return { success: false }
+      }
+
+      // Create or update profile
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          email,
+          whop_membership_id: membershipId,
+          subscription_status: 'active',
+          subscription_started_at: new Date().toISOString(),
+        }, {
+          onConflict: 'email',
+        })
+
+      if (error) {
+        console.error('Failed to upsert profile:', error)
+        return { success: false }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('membership.went_valid handler error:', error)
+      return { success: false }
+    }
+  },
+
+  'membership.went_invalid': async (data: WhopWebhookPayload['data']) => {
+    // Membership is no longer active (cancelled, expired, payment failed)
+    console.log('Membership went invalid:', data)
+
+    try {
+      const supabase = await createClient()
+      const membershipId = data.id
+
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          subscription_status: 'inactive',
+          subscription_ends_at: new Date().toISOString(),
+        })
+        .eq('whop_membership_id', membershipId)
+
+      if (error) {
+        console.error('Failed to update profile:', error)
+        return { success: false }
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('membership.went_invalid handler error:', error)
+      return { success: false }
+    }
+  },
+
   'payment.succeeded': async (data: WhopWebhookPayload['data']) => {
-    // Handle successful payment
-    // 1. Look up quiz session from metadata
-    // 2. Create user profile if doesn't exist
-    // 3. Link quiz session to profile
-    // 4. Grant access
     console.log('Payment succeeded:', data)
+    // Payment succeeded - membership.went_valid handles the actual access grant
     return { success: true }
   },
 
   'payment.failed': async (data: WhopWebhookPayload['data']) => {
-    // Handle failed payment
     console.log('Payment failed:', data)
-    return { success: true }
-  },
-
-  'membership.activated': async (data: WhopWebhookPayload['data']) => {
-    // Handle membership activation
-    // Update user profile subscription status
-    console.log('Membership activated:', data)
-    return { success: true }
-  },
-
-  'membership.deactivated': async (data: WhopWebhookPayload['data']) => {
-    // Handle membership deactivation
-    // Update user profile subscription status
-    console.log('Membership deactivated:', data)
-    return { success: true }
-  },
-
-  'membership.cancelled': async (data: WhopWebhookPayload['data']) => {
-    // Handle membership cancellation
-    console.log('Membership cancelled:', data)
-    return { success: true }
-  },
-
-  'subscription.renewed': async (data: WhopWebhookPayload['data']) => {
-    // Handle subscription renewal
-    console.log('Subscription renewed:', data)
     return { success: true }
   },
 }
