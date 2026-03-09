@@ -1,6 +1,7 @@
-import { createHmac, timingSafeEqual } from 'crypto'
+import { createHmac, timingSafeEqual, randomBytes } from 'crypto'
 import type { WhopWebhookPayload, WhopEventType } from '@/types'
 import { createClient } from '@/lib/supabase/server'
+import { sendMagicLink } from '@/lib/email/send'
 
 function getWebhookSecret() {
   return process.env.WHOP_WEBHOOK_SECRET || ''
@@ -83,6 +84,13 @@ export function parseWebhookPayload(body: string): WhopWebhookPayload | null {
 }
 
 /**
+ * Generate a secure magic link token
+ */
+function generateMagicToken(): string {
+  return randomBytes(32).toString('hex')
+}
+
+/**
  * Handle membership activation (shared logic)
  */
 async function handleMembershipActive(data: WhopWebhookPayload['data']): Promise<{ success: boolean }> {
@@ -94,66 +102,52 @@ async function handleMembershipActive(data: WhopWebhookPayload['data']): Promise
     const membershipId = data.membershipId
     const fullName = data.name || data.user?.name || data.username || data.user?.username || null
 
-    // Extract session_id from metadata (passed via checkout URL d[session_id]=xxx)
-    // Whop may nest it differently depending on webhook version
-    const metadata = data.metadata as Record<string, unknown> | undefined
-    const sessionId = (
-      metadata?.session_id ||
-      (metadata?.d as Record<string, unknown>)?.session_id ||
-      null
-    ) as string | null
+    console.log('Extracted - Email:', email, 'MembershipId:', membershipId, 'Name:', fullName)
 
-    console.log('Extracted - Email:', email, 'MembershipId:', membershipId, 'Name:', fullName, 'SessionId:', sessionId)
-
-    if (!email && !sessionId) {
-      console.error('No email or session_id found in membership data')
+    if (!email) {
+      console.error('No email found in membership data')
       return { success: false }
     }
 
-    // If we have a session_id, update by session_id (most reliable)
-    if (sessionId) {
-      const { error: sessionError } = await supabase
-        .from('profiles')
-        .update({
-          whop_email: email,
-          full_name: fullName,
-          whop_membership_id: membershipId,
-          subscription_status: 'active',
-          subscription_started_at: new Date().toISOString(),
-        })
-        .eq('session_id', sessionId)
+    // Generate magic link token
+    const magicToken = generateMagicToken()
+    const tokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days
 
-      if (!sessionError) {
-        console.log('Profile updated by session_id:', sessionId)
-        return { success: true }
-      }
-      console.log('No profile found with session_id, falling back to email')
+    // Create or update profile with magic token
+    const { error } = await supabase
+      .from('profiles')
+      .upsert({
+        email,
+        full_name: fullName,
+        whop_membership_id: membershipId,
+        subscription_status: 'active',
+        subscription_started_at: new Date().toISOString(),
+        magic_token: magicToken,
+        magic_token_expires_at: tokenExpiresAt,
+      }, {
+        onConflict: 'email',
+      })
+
+    if (error) {
+      console.error('Failed to upsert profile:', error)
+      return { success: false }
     }
 
-    // Fallback: Create or update profile by email
-    if (email) {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          email,
-          full_name: fullName,
-          whop_membership_id: membershipId,
-          subscription_status: 'active',
-          subscription_started_at: new Date().toISOString(),
-        }, {
-          onConflict: 'email',
-        })
+    console.log('Profile saved successfully for:', email)
 
-      if (error) {
-        console.error('Failed to upsert profile:', error)
-        return { success: false }
-      }
+    // Send magic link email
+    const emailSent = await sendMagicLink({
+      to: email,
+      token: magicToken,
+      name: fullName || undefined,
+    })
 
-      console.log('Profile saved successfully for:', email)
-      return { success: true }
+    if (!emailSent) {
+      console.error('Failed to send magic link email')
+      // Don't fail the webhook - profile is saved, they can use sign-in page
     }
 
-    return { success: false }
+    return { success: true }
   } catch (error) {
     console.error('handleMembershipActive error:', error)
     return { success: false }

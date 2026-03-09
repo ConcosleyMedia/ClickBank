@@ -1,0 +1,43 @@
+'use client'
+
+import Link from 'next/link'
+
+export default function PaymentSuccessPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-teal-50 to-white flex items-center justify-center p-4">
+      <div className="max-w-md w-full text-center">
+        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          Payment Successful!
+        </h1>
+
+        <p className="text-lg text-gray-600 mb-8">
+          Check your email for a link to access your IQ results. The email should arrive within a few minutes.
+        </p>
+
+        <div className="bg-gray-50 rounded-xl p-6 mb-8">
+          <p className="text-sm text-gray-500 mb-2">Didn&apos;t receive the email?</p>
+          <p className="text-sm text-gray-600">
+            Check your spam folder, or use the{' '}
+            <Link href="/sign-in" className="text-teal-600 hover:text-teal-700 font-medium">
+              sign-in page
+            </Link>{' '}
+            to access your results with the email you used at checkout.
+          </p>
+        </div>
+
+        <Link
+          href="/"
+          className="text-gray-500 hover:text-gray-700 text-sm"
+        >
+          Return to home
+        </Link>
+      </div>
+    </div>
+  )
+}

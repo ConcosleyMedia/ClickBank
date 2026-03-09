@@ -8,9 +8,10 @@ interface SubscriptionState {
   isSubscribed: boolean
   email: string | null
   isPolling: boolean
+  needsEmailVerification: boolean
 }
 
-const MAX_POLL_ATTEMPTS = 15
+const MAX_POLL_ATTEMPTS = 10
 const POLL_INTERVAL_MS = 2000
 const PAYMENT_PENDING_TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
 
@@ -21,11 +22,12 @@ export function useSubscription(): SubscriptionState {
     isSubscribed: false,
     email: null,
     isPolling: false,
+    needsEmailVerification: false,
   })
 
-  const checkSubscription = useCallback(async (): Promise<{ isSubscribed: boolean; email?: string }> => {
+  const checkSubscription = useCallback(async (emailOverride?: string): Promise<{ isSubscribed: boolean; email?: string }> => {
     const sessionId = localStorage.getItem('brainrank_session')
-    const email = localStorage.getItem('user_email')
+    const email = emailOverride || localStorage.getItem('user_email')
 
     if (!sessionId && !email) {
       return { isSubscribed: false }
@@ -65,12 +67,34 @@ export function useSubscription(): SubscriptionState {
     }
   }, [])
 
+  // Function to verify with Whop email (called from UI)
+  const verifyWithEmail = useCallback(async (whopEmail: string): Promise<boolean> => {
+    const result = await checkSubscription(whopEmail)
+    if (result.isSubscribed) {
+      localStorage.setItem('user_email', whopEmail)
+      localStorage.removeItem('payment_pending')
+      setState(prev => ({
+        ...prev,
+        isSubscribed: true,
+        email: whopEmail,
+        needsEmailVerification: false,
+      }))
+      return true
+    }
+    return false
+  }, [checkSubscription])
+
+  // Expose verifyWithEmail globally for the UI to call
+  useEffect(() => {
+    (window as unknown as { verifyWithEmail: typeof verifyWithEmail }).verifyWithEmail = verifyWithEmail
+  }, [verifyWithEmail])
+
   useEffect(() => {
     async function init() {
       const sessionId = localStorage.getItem('brainrank_session')
       const email = localStorage.getItem('user_email')
 
-      // Check URL for Whop redirect params (membership_id, id, etc)
+      // Check URL for Whop redirect params
       const membershipId = searchParams.get('membership_id') ||
                           searchParams.get('membership') ||
                           searchParams.get('id')
@@ -85,15 +109,14 @@ export function useSubscription(): SubscriptionState {
         const verified = await verifyMembership(membershipId)
         if (verified) {
           localStorage.removeItem('payment_pending')
-          // Clean URL params
           window.history.replaceState({}, '', window.location.pathname)
-          setState({ isLoading: false, isSubscribed: true, email, isPolling: false })
+          setState({ isLoading: false, isSubscribed: true, email, isPolling: false, needsEmailVerification: false })
           return
         }
       }
 
       if (!sessionId && !email) {
-        setState({ isLoading: false, isSubscribed: false, email: null, isPolling: false })
+        setState({ isLoading: false, isSubscribed: false, email: null, isPolling: false, needsEmailVerification: false })
         return
       }
 
@@ -110,13 +133,13 @@ export function useSubscription(): SubscriptionState {
         if (result.email) {
           localStorage.setItem('user_email', result.email)
         }
-        setState({ isLoading: false, isSubscribed: true, email: result.email || email, isPolling: false })
+        setState({ isLoading: false, isSubscribed: true, email: result.email || email, isPolling: false, needsEmailVerification: false })
         return
       }
 
       // If returning from payment and not subscribed yet, poll
       if (isRecentPayment) {
-        setState({ isLoading: false, isSubscribed: false, email, isPolling: true })
+        setState({ isLoading: false, isSubscribed: false, email, isPolling: true, needsEmailVerification: false })
 
         let attempts = 0
         const poll = async () => {
@@ -130,21 +153,22 @@ export function useSubscription(): SubscriptionState {
             if (pollResult.email) {
               localStorage.setItem('user_email', pollResult.email)
             }
-            setState({ isLoading: false, isSubscribed: true, email: pollResult.email || email, isPolling: false })
+            setState({ isLoading: false, isSubscribed: true, email: pollResult.email || email, isPolling: false, needsEmailVerification: false })
             return
           }
 
           if (attempts < MAX_POLL_ATTEMPTS) {
             setTimeout(poll, POLL_INTERVAL_MS)
           } else {
-            console.log('Polling exhausted, giving up')
-            setState({ isLoading: false, isSubscribed: false, email, isPolling: false })
+            // Polling exhausted - ask user to enter their Whop email
+            console.log('Polling exhausted, showing email verification form')
+            setState({ isLoading: false, isSubscribed: false, email, isPolling: false, needsEmailVerification: true })
           }
         }
 
         setTimeout(poll, POLL_INTERVAL_MS)
       } else {
-        setState({ isLoading: false, isSubscribed: false, email, isPolling: false })
+        setState({ isLoading: false, isSubscribed: false, email, isPolling: false, needsEmailVerification: false })
       }
     }
 
