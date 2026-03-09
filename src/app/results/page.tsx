@@ -46,18 +46,20 @@ export default function ResultsPage() {
 
   const handlePayment = async () => {
     const email = localStorage.getItem('user_email')
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
     // Whop checkout URL format: https://whop.com/checkout/PLAN_ID
     const planId = process.env.NEXT_PUBLIC_WHOP_PLAN_ID || 'plan_xKcYuwkYYT5mB'
 
-    const params = new URLSearchParams()
-    params.set('d', `${baseUrl}/dashboard`) // redirect after purchase
+    // Build checkout URL - Whop will redirect to the URL set in product settings
+    // Make sure to set redirect URL in Whop Dashboard → Products → Settings
+    let checkoutUrl = `https://whop.com/checkout/${planId}/`
 
-    if (email) params.set('email', email)
+    if (email) {
+      checkoutUrl += `?email=${encodeURIComponent(email)}`
+    }
 
     // Redirect to Whop checkout
-    window.location.href = `https://whop.com/checkout/${planId}/?${params.toString()}`
+    window.location.href = checkoutUrl
   }
 
   return (
