@@ -15,7 +15,7 @@ export default function CalculatingPage() {
   // Check for quiz result on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const quizResult = sessionStorage.getItem('quiz_result')
+      const quizResult = localStorage.getItem('quiz_result')
       if (!quizResult) {
         router.replace('/start')
       }
