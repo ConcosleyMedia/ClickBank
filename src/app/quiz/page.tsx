@@ -35,6 +35,24 @@ export default function QuizPage() {
     timer.pause()
     const result = await quiz.completeQuiz()
     localStorage.setItem('quiz_result', JSON.stringify(result))
+
+    // Save to Supabase
+    try {
+      await fetch('/api/quiz/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          answers: result.answers,
+          totalTimeSeconds: result.totalTimeSeconds,
+          gender: quiz.gender,
+          questionIds: quiz.questionIds,
+        }),
+      })
+    } catch (error) {
+      console.error('Failed to save quiz to database:', error)
+      // Continue anyway - localStorage has the data
+    }
+
     router.push('/calculating')
   }
 
