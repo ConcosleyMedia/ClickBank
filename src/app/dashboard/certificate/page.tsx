@@ -1,7 +1,9 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
+import { useRef, useState, useEffect, useCallback } from 'react'
 import { calculateIQScore } from '@/lib/quiz/scoring'
+import html2canvas from 'html2canvas'
+import { jsPDF } from 'jspdf'
 
 interface QuizResult {
   iqScore: number
@@ -53,17 +55,44 @@ export default function CertificatePage() {
     }
   }, [])
 
-  const handleDownload = async () => {
+  const handleDownload = useCallback(async () => {
+    if (!certificateRef.current) return
+
     setIsDownloading(true)
 
-    // In production, this would use html2canvas or similar
-    // to generate a PNG/PDF of the certificate
     try {
-      alert('Certificate download would be triggered here. In production, this generates a PNG or PDF.')
+      // Capture the certificate as canvas
+      const canvas = await html2canvas(certificateRef.current, {
+        scale: 2, // Higher resolution
+        useCORS: true,
+        backgroundColor: '#f8fafc',
+      })
+
+      // Calculate dimensions for landscape PDF
+      const imgWidth = 297 // A4 landscape width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width
+
+      // Create PDF
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      })
+
+      // Add the image to PDF
+      const imgData = canvas.toDataURL('image/png')
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+
+      // Download
+      const fileName = `BrainRank-IQ-Certificate-${userName.replace(/\s+/g, '-') || 'User'}.pdf`
+      pdf.save(fileName)
+    } catch (error) {
+      console.error('Failed to generate PDF:', error)
+      alert('Failed to generate certificate. Please try again.')
     } finally {
       setIsDownloading(false)
     }
-  }
+  }, [userName])
 
   const currentDate = new Date().toLocaleDateString('en-US', {
     month: 'long',
