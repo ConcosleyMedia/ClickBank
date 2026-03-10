@@ -52,7 +52,7 @@ export default function Home() {
         </Link>
 
         {/* Social proof */}
-        <div className="flex items-center justify-center gap-4">
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4">
           <div className="flex -space-x-3">
             {[1, 2, 3, 4].map((i) => (
               <div
@@ -64,7 +64,7 @@ export default function Home() {
             ))}
           </div>
 
-          <div className="text-left">
+          <div className="text-center sm:text-left">
             <p className="text-sm text-gray-500">Excellent user reviews</p>
             <p className="font-semibold text-gray-900">
               <span className="text-teal-600">{testCount.toLocaleString()}</span> tests taken today

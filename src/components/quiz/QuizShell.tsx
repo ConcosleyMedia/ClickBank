@@ -61,7 +61,7 @@ export function QuizShell({
       </header>
 
       {/* Main content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
+      <main className="flex-1 flex items-start sm:items-center justify-center px-4 py-4 sm:py-8 overflow-y-auto">
         <div className="w-full animate-fade-in">{children}</div>
       </main>
 

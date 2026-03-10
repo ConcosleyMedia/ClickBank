@@ -20,19 +20,19 @@ export function LikertQuestion({ question, selectedValue, onSelect }: LikertQues
   return (
     <div className="w-full max-w-2xl mx-auto">
       {/* Statement */}
-      <h2 className="text-2xl font-semibold text-gray-900 text-center mb-10">
+      <h2 className="text-lg sm:text-2xl font-semibold text-gray-900 text-center mb-6 sm:mb-10">
         {question.statement}
       </h2>
 
       {/* Likert scale options */}
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {likertOptions.map((option) => {
           const isSelected = selectedValue === option.value
           return (
             <button
               key={option.value}
               onClick={() => onSelect(option.value)}
-              className={`w-full py-4 px-6 rounded-xl font-medium text-white transition-all transform ${
+              className={`w-full py-3 sm:py-4 px-4 sm:px-6 rounded-xl font-medium text-white transition-all transform ${
                 option.color
               } ${
                 isSelected
