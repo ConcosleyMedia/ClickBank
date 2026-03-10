@@ -8,7 +8,7 @@ import { useSubscription } from '@/hooks/useSubscription'
 const navItems = [
   { href: '/dashboard', label: 'Results', icon: 'chart' },
   { href: '/dashboard/certificate', label: 'Certificate', icon: 'certificate' },
-  { href: '/dashboard/training', label: 'Training', icon: 'brain' },
+  { href: '/dashboard/train', label: 'Training', icon: 'brain' },
 ]
 
 const icons = {
