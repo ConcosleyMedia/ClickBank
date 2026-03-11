@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/lib/i18n/context'
 
 function generateTestCount(): number {
   const baseCount = 17000
@@ -17,6 +18,7 @@ function generateTestCount(): number {
 
 export default function Home() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [testCount, setTestCount] = useState(17645)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
 
@@ -31,12 +33,12 @@ export default function Home() {
       {/* Main content */}
       <div className="text-center max-w-2xl mx-auto">
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-          Want to Know Your{' '}
-          <span className="text-teal-600">Real IQ Score?</span>
+          {t.landing.headline}{' '}
+          <span className="text-teal-600">{t.landing.headlineHighlight}</span>
         </h1>
 
         <p className="text-lg sm:text-xl text-gray-600 mb-10">
-          Take our scientifically designed IQ test and discover your cognitive abilities
+          {t.landing.subheadline}
         </p>
 
         {/* CTA button - changes based on login state */}
@@ -44,7 +46,7 @@ export default function Home() {
           onClick={() => router.push(isLoggedIn ? '/dashboard/train' : '/start')}
           className="w-full sm:w-auto bg-teal-500 hover:bg-teal-600 active:bg-teal-700 text-white px-10 py-5 rounded-xl font-semibold text-xl transition-colors shadow-lg shadow-teal-500/25 mb-12 touch-manipulation"
         >
-          {isLoggedIn ? 'Continue Training' : 'Start IQ Test Now'}
+          {isLoggedIn ? t.landing.ctaContinue : t.landing.ctaStart}
         </button>
 
         {/* Social proof */}
@@ -61,9 +63,9 @@ export default function Home() {
           </div>
 
           <div className="text-center sm:text-left">
-            <p className="text-sm text-gray-500">Excellent user reviews</p>
+            <p className="text-sm text-gray-500">{t.landing.socialProof}</p>
             <p className="font-semibold text-gray-900">
-              <span className="text-teal-600">{testCount.toLocaleString()}</span> tests taken today
+              <span className="text-teal-600">{testCount.toLocaleString()}</span> {t.landing.testsTaken}
             </p>
           </div>
         </div>

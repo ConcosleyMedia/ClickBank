@@ -3,9 +3,12 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useLanguage } from '@/lib/i18n/context'
+import { LanguageDropdown } from './LanguageDropdown'
 
 export function Navbar() {
   const router = useRouter()
+  const { t } = useLanguage()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [mounted, setMounted] = useState(false)
 
@@ -38,23 +41,23 @@ export function Navbar() {
 
     if (isLoggedIn) {
       return (
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <Link
             href="/dashboard"
-            className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            className="text-gray-600 hover:text-gray-900 font-medium transition-colors text-sm sm:text-base"
           >
-            Dashboard
+            {t.nav.dashboard}
           </Link>
           <Link
             href="/dashboard/train"
-            className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors"
+            className="bg-teal-500 hover:bg-teal-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold transition-colors text-sm sm:text-base"
           >
-            Training
+            {t.nav.training}
           </Link>
           <button
             onClick={handleLogout}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            title="Logout"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1"
+            title={t.nav.logout}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
@@ -65,18 +68,18 @@ export function Navbar() {
     }
 
     return (
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 sm:gap-4">
         <Link
           href="/sign-in"
-          className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+          className="text-gray-600 hover:text-gray-900 font-medium transition-colors text-sm sm:text-base"
         >
-          Log In
+          {t.nav.logIn}
         </Link>
         <Link
           href="/start"
-          className="bg-teal-500 hover:bg-teal-600 text-white px-6 py-2.5 rounded-lg font-semibold transition-colors"
+          className="bg-teal-500 hover:bg-teal-600 text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg font-semibold transition-colors text-sm sm:text-base"
         >
-          Start Test
+          {t.nav.startTest}
         </Link>
       </div>
     )
@@ -94,8 +97,11 @@ export function Navbar() {
             <span className="text-xl font-bold text-gray-900">BrainRank</span>
           </Link>
 
-          {/* Right side - Auth buttons */}
-          {renderAuthButtons()}
+          {/* Right side */}
+          <div className="flex items-center gap-2 sm:gap-4">
+            <LanguageDropdown />
+            {renderAuthButtons()}
+          </div>
         </div>
       </div>
     </nav>
