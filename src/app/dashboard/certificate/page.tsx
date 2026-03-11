@@ -56,16 +56,25 @@ export default function CertificatePage() {
   }, [])
 
   const handleDownload = useCallback(async () => {
-    if (!certificateRef.current) return
+    if (!certificateRef.current) {
+      alert('Certificate not ready. Please wait and try again.')
+      return
+    }
 
     setIsDownloading(true)
 
     try {
+      // Small delay to ensure rendering is complete
+      await new Promise(resolve => setTimeout(resolve, 100))
+
       // Capture the certificate as canvas
       const canvas = await html2canvas(certificateRef.current, {
         scale: 2, // Higher resolution
         useCORS: true,
         backgroundColor: '#f8fafc',
+        logging: false,
+        allowTaint: true,
+        foreignObjectRendering: false,
       })
 
       // Calculate dimensions for landscape PDF
@@ -80,15 +89,28 @@ export default function CertificatePage() {
       })
 
       // Add the image to PDF
-      const imgData = canvas.toDataURL('image/png')
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight)
+      const imgData = canvas.toDataURL('image/png', 1.0)
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, 210)) // Cap height at A4
 
       // Download
       const fileName = `BrainRank-IQ-Certificate-${userName.replace(/\s+/g, '-') || 'User'}.pdf`
       pdf.save(fileName)
     } catch (error) {
       console.error('Failed to generate PDF:', error)
-      alert('Failed to generate certificate. Please try again.')
+      // Fallback: try downloading as image
+      try {
+        const canvas = await html2canvas(certificateRef.current, {
+          scale: 2,
+          backgroundColor: '#f8fafc',
+        })
+        const link = document.createElement('a')
+        link.download = `BrainRank-IQ-Certificate-${userName.replace(/\s+/g, '-') || 'User'}.png`
+        link.href = canvas.toDataURL('image/png')
+        link.click()
+      } catch (fallbackError) {
+        console.error('Fallback also failed:', fallbackError)
+        alert('Failed to generate certificate. Please try again or use a different browser.')
+      }
     } finally {
       setIsDownloading(false)
     }
